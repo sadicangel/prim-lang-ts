@@ -8,7 +8,7 @@ import type { NameSyntax, SimpleNameSyntax } from "./name-syntax.js";
 import type { StatementSyntax } from "./statement-syntax.js";
 import type { TypeSyntax } from "./type-syntax.js";
 
-export type ExpressionSyntax = ModuleExpressionSyntax | StructExpressionSyntax | BlockExpressionSyntax | GroupExpressionSyntax | LambdaExpressionSyntax | ArrayInitializerExpressionSyntax | LiteralExpressionSyntax | NameExpressionSyntax | UnaryExpressionSyntax | BinaryExpressionSyntax | AssignmentExpression | CallExpressionSyntax | StructInitializerExpressionSyntax | ElementAccessExpressionSyntax | MemberAccessExpressionSyntax | ConversionExpressionSyntax;
+export type ExpressionSyntax = ModuleExpressionSyntax | StructExpressionSyntax | BlockExpressionSyntax | GroupExpressionSyntax | LambdaExpressionSyntax | ArrayInitializerExpressionSyntax | LiteralExpressionSyntax | NameExpressionSyntax | UnaryExpressionSyntax | BinaryExpressionSyntax | AssignmentExpression | CallExpressionSyntax | StructInitializerExpressionSyntax | ElementAccessExpressionSyntax | MemberAccessExpressionSyntax | ConversionExpressionSyntax | IfExpressionSyntax | WhileExpressionSyntax | ContinueExpressionSyntax | BreakExpressionSyntax | ReturnExpressionSyntax;
 
 export class ModuleExpressionSyntax implements ISyntaxNode {
     readonly syntaxKind = SyntaxKind.ModuleExpression;
@@ -236,5 +236,85 @@ export class PropertyInitializerExpression implements ISyntaxNode {
         yield this.propertyName;
         yield this.equalsToken;
         yield this.propertyValue;
+    }
+}
+
+export class IfExpressionSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.IfExpression;
+    constructor(
+        readonly ifKeyword: SyntaxToken,
+        readonly parenthesisOpenToken: SyntaxToken,
+        readonly condition: ExpressionSyntax,
+        readonly parenthesisCloseToken: SyntaxToken,
+        readonly thenExpression: ExpressionSyntax,
+        readonly elseClause: ElseClauseExpressionSyntax | undefined) { }
+
+    *children(): Iterator<SyntaxNode> {
+        yield this.ifKeyword;
+        yield this.parenthesisOpenToken;
+        yield this.condition;
+        yield this.parenthesisCloseToken;
+        yield this.thenExpression;
+        if (this.elseClause) yield this.elseClause;
+    }
+}
+
+export class ElseClauseExpressionSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.ElseClauseExpression;
+    constructor(
+        readonly elseKeyword: SyntaxToken,
+        readonly expression: ExpressionSyntax) { }
+
+    *children(): Iterator<SyntaxNode> {
+        yield this.elseKeyword;
+        yield this.expression;
+    }
+}
+
+export class WhileExpressionSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.WhileExpression;
+    constructor(
+        readonly whileKeyword: SyntaxToken,
+        readonly parenthesisOpenToken: SyntaxToken,
+        readonly condition: ExpressionSyntax,
+        readonly parenthesisCloseToken: SyntaxToken,
+        readonly body: ExpressionSyntax) { }
+
+    *children(): Iterator<SyntaxNode> {
+        yield this.whileKeyword;
+        yield this.parenthesisOpenToken;
+        yield this.condition;
+        yield this.parenthesisCloseToken;
+        yield this.body;
+    }
+}
+
+export class ContinueExpressionSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.ContinueExpression;
+    constructor(readonly continueKeyword: SyntaxToken) { }
+    *children(): Iterator<SyntaxNode> { yield this.continueKeyword; }
+}
+
+export class BreakExpressionSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.BreakExpression;
+    constructor(
+        readonly breakKeyword: SyntaxToken,
+        readonly expression: ExpressionSyntax | undefined) { }
+
+    *children(): Iterator<SyntaxNode> {
+        yield this.breakKeyword;
+        if (this.expression) yield this.expression;
+    }
+}
+
+export class ReturnExpressionSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.ReturnExpression;
+    constructor(
+        readonly returnKeyword: SyntaxToken,
+        readonly expression: ExpressionSyntax | undefined) { }
+
+    *children(): Iterator<SyntaxNode> {
+        yield this.returnKeyword;
+        if (this.expression) yield this.expression;
     }
 }

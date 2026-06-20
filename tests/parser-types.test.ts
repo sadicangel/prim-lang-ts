@@ -39,6 +39,35 @@ describe("Parser declarations and types", () => {
   });
 
   it.each([
+    {
+      text: "value:i32:42;",
+      typeKind: SyntaxKind.I32Type,
+      operatorKind: SyntaxKind.ColonToken
+    },
+    {
+      text: "value:i32=42;",
+      typeKind: SyntaxKind.I32Type,
+      operatorKind: SyntaxKind.EqualsToken
+    },
+    {
+      text: "value::42;",
+      typeKind: undefined,
+      operatorKind: SyntaxKind.ColonToken
+    },
+    {
+      text: "value:=42;",
+      typeKind: undefined,
+      operatorKind: SyntaxKind.EqualsToken
+    }
+  ] as const)("parses declaration $text", ({ text, typeKind, operatorKind }) => {
+    const declaration = parseDeclaration(text);
+
+    expect(declaration.type?.syntaxKind).toBe(typeKind);
+    expect(declaration.operatorToken.syntaxKind).toBe(operatorKind);
+    expect(declaration.initializer.syntaxKind).toBe(SyntaxKind.I32LiteralExpression);
+  });
+
+  it.each([
     ["any", SyntaxKind.AnyType],
     ["err", SyntaxKind.ErrType],
     ["unknown", SyntaxKind.UnknownType],

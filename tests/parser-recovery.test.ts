@@ -44,13 +44,13 @@ describe("Parser recovery", () => {
     expect(parser.diagnostics).toEqual([]);
   });
 
-  it("preserves the declaration operator when the type is missing", () => {
+  it("treats an immediate declaration operator as inferred typing", () => {
     const result = parse("value:=0;");
     const declaration = result.compilationUnit.declarations[0];
 
     expect(result.compilationUnit.declarations).toHaveLength(1);
-    expect(result.parser.diagnostics).toHaveLength(1);
-    expect(declaration?.type).toBeInstanceOf(ErrorTypeSyntax);
+    expect(result.parser.diagnostics).toHaveLength(0);
+    expect(declaration?.type).toBeUndefined();
     expect(declaration?.operatorToken.syntaxKind).toBe(SyntaxKind.EqualsToken);
     expect(declaration?.operatorToken.isSynthetic).toBe(false);
   });
@@ -111,5 +111,17 @@ describe("Parser recovery", () => {
     expect(errorType.errorToken.sourceSpan.range.start).toBe(
       errorType.errorToken.sourceSpan.range.end
     );
+  });
+
+  it("inserts a block separator without consuming the next expression", () => {
+    const result = parse("value:i32={ one two };");
+    const block = result.compilationUnit.declarations[0]?.initializer;
+
+    expect(result.parser.diagnostics).toHaveLength(1);
+    expect(block?.syntaxKind).toBe(SyntaxKind.BlockExpression);
+    if (block?.syntaxKind !== SyntaxKind.BlockExpression) return;
+    expect(block.items).toHaveLength(2);
+    expect(block.items[0]?.syntaxKind).toBe(SyntaxKind.ExpressionStatement);
+    expect(block.items[1]?.syntaxKind).toBe(SyntaxKind.NameExpression);
   });
 });

@@ -6,13 +6,18 @@ import {
   BinaryExpressionSyntax,
   BlockExpressionSyntax,
   CallExpressionSyntax,
+  BreakExpressionSyntax,
+  ContinueExpressionSyntax,
   ConversionExpressionSyntax,
   ElementAccessExpressionSyntax,
   GroupExpressionSyntax,
+  IfExpressionSyntax,
   LambdaExpressionSyntax,
   MemberAccessExpressionSyntax,
+  ReturnExpressionSyntax,
   StructInitializerExpressionSyntax,
-  UnaryExpressionSyntax
+  UnaryExpressionSyntax,
+  WhileExpressionSyntax
 } from "../src/syntax/expression-syntax.js";
 import { childrenOf, parseExpression } from "./parser-test-helpers.js";
 
@@ -166,5 +171,73 @@ describe("Parser expressions", () => {
       SyntaxKind.NameExpression,
       SyntaxKind.ParenthesisCloseToken
     ]);
+  });
+
+  it("parses if expressions with and without else", () => {
+    const withElse = parseExpression("if (ready) yes else no");
+    const withoutElse = parseExpression("if (ready) yes");
+
+    expect(withElse).toBeInstanceOf(IfExpressionSyntax);
+    expect((withElse as IfExpressionSyntax).elseClause?.expression.syntaxKind).toBe(
+      SyntaxKind.NameExpression
+    );
+    expect(withoutElse).toBeInstanceOf(IfExpressionSyntax);
+    expect((withoutElse as IfExpressionSyntax).elseClause).toBeUndefined();
+  });
+
+  it("associates else with the nearest if expression", () => {
+    const expression = parseExpression("if (outer) if (inner) one else two else three");
+
+    expect(expression).toBeInstanceOf(IfExpressionSyntax);
+    const outer = expression as IfExpressionSyntax;
+    expect(outer.thenExpression).toBeInstanceOf(IfExpressionSyntax);
+    expect((outer.thenExpression as IfExpressionSyntax).elseClause).toBeDefined();
+    expect(outer.elseClause).toBeDefined();
+  });
+
+  it("parses while expressions with arbitrary expression bodies", () => {
+    const simple = parseExpression("while (ready) work()");
+    const block = parseExpression("while (ready) { work(); continue; }");
+
+    expect(simple).toBeInstanceOf(WhileExpressionSyntax);
+    expect((simple as WhileExpressionSyntax).body).toBeInstanceOf(CallExpressionSyntax);
+    expect(block).toBeInstanceOf(WhileExpressionSyntax);
+    expect((block as WhileExpressionSyntax).body).toBeInstanceOf(BlockExpressionSyntax);
+  });
+
+  it("parses value and unit break expressions", () => {
+    const withValue = parseExpression("while (true) { break 42; }") as WhileExpressionSyntax;
+    const withoutValue = parseExpression("while (true) { break; }") as WhileExpressionSyntax;
+
+    const valueBlock = withValue.body as BlockExpressionSyntax;
+    const unitBlock = withoutValue.body as BlockExpressionSyntax;
+    const valueBreak = (valueBlock.items[0] as { expression: BreakExpressionSyntax }).expression;
+    const unitBreak = (unitBlock.items[0] as { expression: BreakExpressionSyntax }).expression;
+    expect(valueBreak).toBeInstanceOf(BreakExpressionSyntax);
+    expect(valueBreak.expression?.syntaxKind).toBe(SyntaxKind.I32LiteralExpression);
+    expect(unitBreak).toBeInstanceOf(BreakExpressionSyntax);
+    expect(unitBreak.expression).toBeUndefined();
+  });
+
+  it("parses continue and return expressions", () => {
+    const expression = parseExpression("{ continue; return 42; return }") as BlockExpressionSyntax;
+
+    expect((expression.items[0] as { expression: ContinueExpressionSyntax }).expression)
+      .toBeInstanceOf(ContinueExpressionSyntax);
+    const valueReturn = (expression.items[1] as { expression: ReturnExpressionSyntax }).expression;
+    expect(valueReturn).toBeInstanceOf(ReturnExpressionSyntax);
+    expect(valueReturn.expression?.syntaxKind).toBe(SyntaxKind.I32LiteralExpression);
+    expect(expression.items[2]).toBeInstanceOf(ReturnExpressionSyntax);
+    expect((expression.items[2] as ReturnExpressionSyntax).expression).toBeUndefined();
+  });
+
+  it("allows control-flow expressions as direct lambda bodies", () => {
+    const returnLambda = parseExpression("() => return 42");
+    const ifLambda = parseExpression("(x) => if (x) 1 else 0");
+
+    expect((returnLambda as LambdaExpressionSyntax).body).toBeInstanceOf(
+      ReturnExpressionSyntax
+    );
+    expect((ifLambda as LambdaExpressionSyntax).body).toBeInstanceOf(IfExpressionSyntax);
   });
 });

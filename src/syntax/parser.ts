@@ -7,7 +7,7 @@ import { Range } from "../text/range.js";
 import { SourceSpan } from "../text/source-span.js";
 import { CompilationUnitSyntax } from "./compilation-unit-syntax.js";
 import { GlobalDeclarationSyntax, LocalDeclarationSyntax } from "./declaration-syntax.js";
-import { ArrayInitializerExpressionSyntax, AssignmentExpression, BinaryExpressionSyntax, BlockExpressionSyntax, type BlockItemSyntax, CallExpressionSyntax, ConversionExpressionSyntax, ElementAccessExpressionSyntax, type ExpressionSyntax, GroupExpressionSyntax, LambdaExpressionSyntax, LiteralExpressionSyntax, MemberAccessExpressionSyntax, ModuleExpressionSyntax, NameExpressionSyntax, PropertyInitializerExpression, StructExpressionSyntax, StructInitializerExpressionSyntax, UnaryExpressionSyntax } from "./expression-syntax.js";
+import { ArrayInitializerExpressionSyntax, AssignmentExpression, BinaryExpressionSyntax, BlockExpressionSyntax, type BlockItemSyntax, BreakExpressionSyntax, CallExpressionSyntax, ContinueExpressionSyntax, ConversionExpressionSyntax, ElementAccessExpressionSyntax, ElseClauseExpressionSyntax, type ExpressionSyntax, GroupExpressionSyntax, IfExpressionSyntax, LambdaExpressionSyntax, LiteralExpressionSyntax, MemberAccessExpressionSyntax, ModuleExpressionSyntax, NameExpressionSyntax, PropertyInitializerExpression, ReturnExpressionSyntax, StructExpressionSyntax, StructInitializerExpressionSyntax, UnaryExpressionSyntax, WhileExpressionSyntax } from "./expression-syntax.js";
 import { QualifiedNameSyntax, SimpleNameSyntax, type NameSyntax } from "./name-syntax.js";
 import { StatementSyntax } from "./statement-syntax.js";
 import type { SyntaxTokenStream } from "./syntax-token-stream.js";
@@ -173,7 +173,10 @@ export class Parser {
     #parseGlobalDeclaration(): GlobalDeclarationSyntax {
         const name = this.#parseName();
         const colonToken = this.#match(SyntaxKind.ColonToken);
-        const type = this.#parseType([SyntaxKind.ColonToken, SyntaxKind.EqualsToken]);
+        const type = this.#stream.peek().syntaxKind === SyntaxKind.ColonToken
+            || this.#stream.peek().syntaxKind === SyntaxKind.EqualsToken
+            ? undefined
+            : this.#parseType([SyntaxKind.ColonToken, SyntaxKind.EqualsToken]);
         const operatorToken = this.#matchAny(SyntaxKind.ColonToken, SyntaxKind.EqualsToken);
         const initializer = this.#parseExpression();
         const semicolonToken = this.#match(SyntaxKind.SemicolonToken);
@@ -183,7 +186,10 @@ export class Parser {
     #parseLocalDeclaration(): LocalDeclarationSyntax {
         const name = this.#parseName({ isSimpleOnly: true });
         const colonToken = this.#match(SyntaxKind.ColonToken);
-        const type = this.#parseType([SyntaxKind.ColonToken, SyntaxKind.EqualsToken]);
+        const type = this.#stream.peek().syntaxKind === SyntaxKind.ColonToken
+            || this.#stream.peek().syntaxKind === SyntaxKind.EqualsToken
+            ? undefined
+            : this.#parseType([SyntaxKind.ColonToken, SyntaxKind.EqualsToken]);
         const operatorToken = this.#matchAny(SyntaxKind.ColonToken, SyntaxKind.EqualsToken);
         const initializer = this.#parseExpression();
         const semicolonToken = this.#match(SyntaxKind.SemicolonToken);
@@ -204,10 +210,16 @@ export class Parser {
                 expression = this.#parseExpression_Module(); break;
             case SyntaxKind.StructKeyword:
                 expression = this.#parseExpression_Struct(); break;
-            // case SyntaxKind.WhileKeyword: expression = undefined; break;
-            // case SyntaxKind.BreakKeyword: expression = undefined; break;
-            // case SyntaxKind.ContinueKeyword: expression = undefined; break;
-            // case SyntaxKind.ReturnKeyword: expression = undefined; break;
+            case SyntaxKind.IfKeyword:
+                expression = this.#parseExpression_If(); break;
+            case SyntaxKind.WhileKeyword:
+                expression = this.#parseExpression_While(); break;
+            case SyntaxKind.BreakKeyword:
+                expression = this.#parseExpression_Break(); break;
+            case SyntaxKind.ContinueKeyword:
+                expression = this.#parseExpression_Continue(); break;
+            case SyntaxKind.ReturnKeyword:
+                expression = this.#parseExpression_Return(); break;
             case SyntaxKind.BraceOpenToken:
                 expression = this.#parseExpression_Block(); break;
             case SyntaxKind.ParenthesisOpenToken:
@@ -324,6 +336,60 @@ export class Parser {
         return new StructExpressionSyntax(structKeyword, braceOpenToken, new SyntaxList(properties), braceCloseToken);
     }
 
+    #parseExpression_If(): IfExpressionSyntax {
+        const ifKeyword = this.#match(SyntaxKind.IfKeyword);
+        const parenthesisOpenToken = this.#match(SyntaxKind.ParenthesisOpenToken);
+        const condition = this.#parseExpression();
+        const parenthesisCloseToken = this.#match(SyntaxKind.ParenthesisCloseToken);
+        const thenExpression = this.#parseExpression();
+        let elseClause: ElseClauseExpressionSyntax | undefined;
+        if (this.#stream.peek().syntaxKind === SyntaxKind.ElseKeyword) {
+            const elseKeyword = this.#match(SyntaxKind.ElseKeyword);
+            elseClause = new ElseClauseExpressionSyntax(elseKeyword, this.#parseExpression());
+        }
+        return new IfExpressionSyntax(
+            ifKeyword,
+            parenthesisOpenToken,
+            condition,
+            parenthesisCloseToken,
+            thenExpression,
+            elseClause);
+    }
+
+    #parseExpression_While(): WhileExpressionSyntax {
+        const whileKeyword = this.#match(SyntaxKind.WhileKeyword);
+        const parenthesisOpenToken = this.#match(SyntaxKind.ParenthesisOpenToken);
+        const condition = this.#parseExpression();
+        const parenthesisCloseToken = this.#match(SyntaxKind.ParenthesisCloseToken);
+        const body = this.#parseExpression();
+        return new WhileExpressionSyntax(
+            whileKeyword,
+            parenthesisOpenToken,
+            condition,
+            parenthesisCloseToken,
+            body);
+    }
+
+    #parseExpression_Break(): BreakExpressionSyntax {
+        const breakKeyword = this.#match(SyntaxKind.BreakKeyword);
+        const expression = this.#isExpressionTerminator()
+            ? undefined
+            : this.#parseExpression();
+        return new BreakExpressionSyntax(breakKeyword, expression);
+    }
+
+    #parseExpression_Continue(): ContinueExpressionSyntax {
+        return new ContinueExpressionSyntax(this.#match(SyntaxKind.ContinueKeyword));
+    }
+
+    #parseExpression_Return(): ReturnExpressionSyntax {
+        const returnKeyword = this.#match(SyntaxKind.ReturnKeyword);
+        const expression = this.#isExpressionTerminator()
+            ? undefined
+            : this.#parseExpression();
+        return new ReturnExpressionSyntax(returnKeyword, expression);
+    }
+
     #parseExpression_Block(): BlockExpressionSyntax {
         const braceOpenToken = this.#match(SyntaxKind.BraceOpenToken);
         const items = new Array<BlockItemSyntax>();
@@ -333,8 +399,13 @@ export class Parser {
                 item = this.#parseLocalDeclaration();
             } else {
                 item = this.#parseExpression();
-                if (this.#stream.peek().syntaxKind === SyntaxKind.SemicolonToken)
+                if (this.#stream.peek().syntaxKind === SyntaxKind.SemicolonToken) {
                     item = new StatementSyntax(item, this.#stream.next());
+                } else if (this.#stream.peek().syntaxKind !== SyntaxKind.BraceCloseToken) {
+                    item = new StatementSyntax(
+                        item,
+                        this.#createSyntheticAtCurrent(SyntaxKind.SemicolonToken));
+                }
             }
             items.push(item);
         }
@@ -408,6 +479,21 @@ export class Parser {
         return new SyntaxToken(expectedSyntaxKind, syntaxToken.sourceSpan, [], [], undefined, true) as SyntaxTokenOf<T>;
     }
 
+    #createSyntheticAtCurrent<T extends SyntaxKind>(expectedSyntaxKind: T): SyntaxTokenOf<T> {
+        const actual = this.#stream.peek();
+        this.#diagnostics.push(Diagnostic.unexpectedToken(expectedSyntaxKind, actual));
+        const sourceSpan = new SourceSpan(
+            actual.sourceSpan.sourceText,
+            Range.emptyAt(actual.sourceSpan.range.start));
+        return new SyntaxToken(
+            expectedSyntaxKind,
+            sourceSpan,
+            [],
+            [],
+            undefined,
+            true) as SyntaxTokenOf<T>;
+    }
+
     #isLambdaAhead(): boolean {
         if (this.#stream.peek().syntaxKind !== SyntaxKind.ParenthesisOpenToken) return false;
         const checkpoint = this.#stream.checkpoint();
@@ -426,5 +512,20 @@ export class Parser {
 
     #isDeclarationAhead(): boolean {
         return this.#stream.peek().syntaxKind === SyntaxKind.IdentifierToken && this.#stream.peek(1).syntaxKind === SyntaxKind.ColonToken;
+    }
+
+    #isExpressionTerminator(): boolean {
+        switch (this.#stream.peek().syntaxKind) {
+            case SyntaxKind.SemicolonToken:
+            case SyntaxKind.BraceCloseToken:
+            case SyntaxKind.ParenthesisCloseToken:
+            case SyntaxKind.BracketCloseToken:
+            case SyntaxKind.CommaToken:
+            case SyntaxKind.ElseKeyword:
+            case SyntaxKind.EofToken:
+                return true;
+            default:
+                return false;
+        }
     }
 }
