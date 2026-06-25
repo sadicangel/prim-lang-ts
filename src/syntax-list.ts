@@ -1,4 +1,4 @@
-import type { SyntaxKind } from "./syntax-kind.js";
+import type { SyntaxTokenKind } from "./syntax-kind.js";
 import type { SyntaxNode } from "./syntax-node.js"
 import type { SyntaxToken, SyntaxTokenOf } from "./syntax-token.js";
 
@@ -26,8 +26,8 @@ export class SyntaxList<T extends SyntaxNode> implements ArrayLike<T>, Iterable<
     }
 }
 
-export type SyntaxOrSeparator<TSyntax extends SyntaxNode, TSeparator extends SyntaxKind> = TSyntax | SyntaxTokenOf<TSeparator>;
-export class SeparatedSyntaxList<TSyntax extends SyntaxNode, TSeparator extends SyntaxKind> implements ArrayLike<TSyntax>, Iterable<TSyntax> {
+export type SyntaxOrSeparator<TSyntax extends SyntaxNode, TSeparator extends SyntaxTokenKind> = TSyntax | SyntaxTokenOf<TSeparator>;
+export class SeparatedSyntaxList<TSyntax extends SyntaxNode, TSeparator extends SyntaxTokenKind> implements ArrayLike<TSyntax>, Iterable<TSyntax> {
     get length(): number { return Math.ceil(this.syntaxNodes.length / 2); }
     [index: number]: TSyntax;
     *[Symbol.iterator](): Iterator<TSyntax> { for (let i = 0; i < this.length; ++i) yield this.syntaxNodes[i * 2] as TSyntax; }

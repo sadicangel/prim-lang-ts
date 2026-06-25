@@ -5,6 +5,14 @@ import type { ExpressionSyntax } from "./expression-syntax.js";
 import type { NameSyntax, SimpleNameSyntax } from "./name-syntax.js";
 import type { TypeSyntax } from "./type-syntax.js";
 
+export const isReadOnly = (declaration: GlobalDeclarationSyntax | LocalDeclarationSyntax): boolean => {
+    return declaration.operatorToken?.syntaxKind === SyntaxKind.ColonToken;
+}
+
+export const isStatic = (declaration: GlobalDeclarationSyntax | LocalDeclarationSyntax): boolean => {
+    return declaration.syntaxKind === SyntaxKind.GlobalDeclaration;
+}
+
 export class GlobalDeclarationSyntax implements ISyntaxNode {
     readonly syntaxKind = SyntaxKind.GlobalDeclaration;
 

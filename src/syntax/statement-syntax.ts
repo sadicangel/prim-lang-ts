@@ -4,7 +4,7 @@ import type { SyntaxToken } from "../syntax-token.js";
 import type { ExpressionSyntax } from "./expression-syntax.js";
 
 
-export class StatementSyntax implements ISyntaxNode {
+export class ExpressionStatementSyntax implements ISyntaxNode {
     readonly syntaxKind = SyntaxKind.ExpressionStatement;
     constructor(readonly expression: ExpressionSyntax, readonly semicolonToken: SyntaxToken) { }
 

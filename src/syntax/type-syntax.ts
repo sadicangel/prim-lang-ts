@@ -1,33 +1,11 @@
-import { SyntaxKind } from "../syntax-kind.js";
+import { SyntaxKind, type TypeSyntaxKind } from "../syntax-kind.js";
 import type { SeparatedSyntaxList } from "../syntax-list.js";
 import type { ISyntaxNode, SyntaxNode } from "../syntax-node.js";
 import type { SyntaxToken } from "../syntax-token.js";
 import type { ExpressionSyntax } from "./expression-syntax.js";
 import type { NameSyntax } from "./name-syntax.js";
 
-export type TypeSyntax = ArrayTypeSyntax | ErrorTypeSyntax | LambdaTypeSyntax | MaybeTypeSyntax | NamedTypeSyntax | PointerTypeSyntax | PredefinedTypeSyntax | UnionTypeSyntax;
-
-export type PredefinedTypeSyntaxKind = SyntaxKind.AnyType
-    | SyntaxKind.ErrType
-    | SyntaxKind.UnknownType
-    | SyntaxKind.NeverType
-    | SyntaxKind.UnitType
-    | SyntaxKind.TypeType
-    | SyntaxKind.StrType
-    | SyntaxKind.BoolType
-    | SyntaxKind.I8Type
-    | SyntaxKind.I16Type
-    | SyntaxKind.I32Type
-    | SyntaxKind.I64Type
-    | SyntaxKind.IszType
-    | SyntaxKind.U8Type
-    | SyntaxKind.U16Type
-    | SyntaxKind.U32Type
-    | SyntaxKind.U64Type
-    | SyntaxKind.UszType
-    | SyntaxKind.F16Type
-    | SyntaxKind.F32Type
-    | SyntaxKind.F64Type;
+export type TypeSyntax = ArrayTypeSyntax | LambdaTypeSyntax | MaybeTypeSyntax | NamedTypeSyntax | PointerTypeSyntax | PredefinedTypeSyntax | UnionTypeSyntax | ErrorTypeSyntax;
 
 export class ArrayTypeSyntax implements ISyntaxNode {
     readonly syntaxKind = SyntaxKind.ArrayType;
@@ -63,13 +41,6 @@ export class LambdaTypeSyntax implements ISyntaxNode {
     }
 }
 
-export class ErrorTypeSyntax implements ISyntaxNode {
-    readonly syntaxKind = SyntaxKind.ErrorType;
-    constructor(readonly errorToken: SyntaxToken) { }
-
-    *children(): Iterator<SyntaxNode> { yield this.errorToken; }
-}
-
 export class MaybeTypeSyntax implements ISyntaxNode {
     readonly syntaxKind = SyntaxKind.MaybeType;
     constructor(
@@ -102,9 +73,15 @@ export class PointerTypeSyntax implements ISyntaxNode {
 }
 
 export class PredefinedTypeSyntax implements ISyntaxNode {
-    constructor(readonly syntaxKind: PredefinedTypeSyntaxKind, readonly typeKeyword: SyntaxToken) { }
+    constructor(readonly syntaxKind: TypeSyntaxKind, readonly typeKeyword: SyntaxToken) { }
     * children(): Iterator<SyntaxNode> { yield this.typeKeyword; }
 
+}
+
+export class ErrorTypeSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.ErrorType;
+    constructor(readonly errorToken: SyntaxToken) { }
+    *children(): Iterator<SyntaxNode> { yield this.errorToken; }
 }
 
 export class UnionTypeSyntax implements ISyntaxNode {

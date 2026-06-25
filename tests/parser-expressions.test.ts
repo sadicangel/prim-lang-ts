@@ -5,17 +5,17 @@ import {
   AssignmentExpression,
   BinaryExpressionSyntax,
   BlockExpressionSyntax,
-  CallExpressionSyntax,
+  InvocationExpressionSyntax,
   BreakExpressionSyntax,
   ContinueExpressionSyntax,
   ConversionExpressionSyntax,
   ElementAccessExpressionSyntax,
   GroupExpressionSyntax,
-  IfExpressionSyntax,
+  IfElseExpressionSyntax,
   LambdaExpressionSyntax,
   MemberAccessExpressionSyntax,
   ReturnExpressionSyntax,
-  StructInitializerExpressionSyntax,
+  ObjectInitializerExpressionSyntax,
   UnaryExpressionSyntax,
   WhileExpressionSyntax
 } from "../src/syntax/expression-syntax.js";
@@ -135,10 +135,10 @@ describe("Parser expressions", () => {
   it("parses calls and argument separators", () => {
     const expression = parseExpression("make(1, 2)");
 
-    expect(expression).toBeInstanceOf(CallExpressionSyntax);
-    const call = expression as CallExpressionSyntax;
-    expect(call.argumentList).toHaveLength(2);
-    expect(call.argumentList.separatorAt(0).syntaxKind).toBe(SyntaxKind.CommaToken);
+    expect(expression).toBeInstanceOf(InvocationExpressionSyntax);
+    const call = expression as InvocationExpressionSyntax;
+    expect(call.arguments_).toHaveLength(2);
+    expect(call.arguments_.separatorAt(0).syntaxKind).toBe(SyntaxKind.CommaToken);
   });
 
   it("parses chained postfix expressions", () => {
@@ -151,14 +151,14 @@ describe("Parser expressions", () => {
     const member = conversion.expression as MemberAccessExpressionSyntax;
     expect(member.receiver).toBeInstanceOf(ElementAccessExpressionSyntax);
     const element = member.receiver as ElementAccessExpressionSyntax;
-    expect(element.receiver).toBeInstanceOf(CallExpressionSyntax);
+    expect(element.receiver).toBeInstanceOf(InvocationExpressionSyntax);
   });
 
   it("parses struct initializers and their properties", () => {
     const expression = parseExpression("Point { x=1, y=2 }");
 
-    expect(expression).toBeInstanceOf(StructInitializerExpressionSyntax);
-    const initializer = expression as StructInitializerExpressionSyntax;
+    expect(expression).toBeInstanceOf(ObjectInitializerExpressionSyntax);
+    const initializer = expression as ObjectInitializerExpressionSyntax;
     expect(initializer.properties).toHaveLength(2);
     expect(initializer.properties.separatorAt(0).syntaxKind).toBe(SyntaxKind.CommaToken);
   });
@@ -177,21 +177,21 @@ describe("Parser expressions", () => {
     const withElse = parseExpression("if (ready) yes else no");
     const withoutElse = parseExpression("if (ready) yes");
 
-    expect(withElse).toBeInstanceOf(IfExpressionSyntax);
-    expect((withElse as IfExpressionSyntax).elseClause?.expression.syntaxKind).toBe(
+    expect(withElse).toBeInstanceOf(IfElseExpressionSyntax);
+    expect((withElse as IfElseExpressionSyntax).elseClause?.expression.syntaxKind).toBe(
       SyntaxKind.NameExpression
     );
-    expect(withoutElse).toBeInstanceOf(IfExpressionSyntax);
-    expect((withoutElse as IfExpressionSyntax).elseClause).toBeUndefined();
+    expect(withoutElse).toBeInstanceOf(IfElseExpressionSyntax);
+    expect((withoutElse as IfElseExpressionSyntax).elseClause).toBeUndefined();
   });
 
   it("associates else with the nearest if expression", () => {
     const expression = parseExpression("if (outer) if (inner) one else two else three");
 
-    expect(expression).toBeInstanceOf(IfExpressionSyntax);
-    const outer = expression as IfExpressionSyntax;
-    expect(outer.thenExpression).toBeInstanceOf(IfExpressionSyntax);
-    expect((outer.thenExpression as IfExpressionSyntax).elseClause).toBeDefined();
+    expect(expression).toBeInstanceOf(IfElseExpressionSyntax);
+    const outer = expression as IfElseExpressionSyntax;
+    expect(outer.then).toBeInstanceOf(IfElseExpressionSyntax);
+    expect((outer.then as IfElseExpressionSyntax).elseClause).toBeDefined();
     expect(outer.elseClause).toBeDefined();
   });
 
@@ -200,7 +200,7 @@ describe("Parser expressions", () => {
     const block = parseExpression("while (ready) { work(); continue; }");
 
     expect(simple).toBeInstanceOf(WhileExpressionSyntax);
-    expect((simple as WhileExpressionSyntax).body).toBeInstanceOf(CallExpressionSyntax);
+    expect((simple as WhileExpressionSyntax).body).toBeInstanceOf(InvocationExpressionSyntax);
     expect(block).toBeInstanceOf(WhileExpressionSyntax);
     expect((block as WhileExpressionSyntax).body).toBeInstanceOf(BlockExpressionSyntax);
   });
@@ -238,6 +238,6 @@ describe("Parser expressions", () => {
     expect((returnLambda as LambdaExpressionSyntax).body).toBeInstanceOf(
       ReturnExpressionSyntax
     );
-    expect((ifLambda as LambdaExpressionSyntax).body).toBeInstanceOf(IfExpressionSyntax);
+    expect((ifLambda as LambdaExpressionSyntax).body).toBeInstanceOf(IfElseExpressionSyntax);
   });
 });

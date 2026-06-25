@@ -1,5 +1,5 @@
-import { SyntaxKind } from "../syntax-kind.js";
-import { SyntaxToken } from "../syntax-token.js";
+import { SyntaxKind, type SyntaxTokenKind } from "../syntax-kind.js";
+import { SyntaxToken, type LexerSyntaxKind } from "../syntax-token.js";
 import { SyntaxTrivia } from "../syntax-trivia.js";
 import { SyntaxFacts } from "../syntax-facts.js";
 import {
@@ -29,7 +29,7 @@ export class Lexer {
     const badTokens = new Array<SyntaxToken>();
     while (true) {
       const syntaxToken = this.scanAny();
-      if (syntaxToken.syntaxKind === SyntaxKind.InvalidSyntax) {
+      if (syntaxToken.syntaxKind === SyntaxKind.InvalidSyntaxToken) {
         badTokens.push(syntaxToken);
         continue;
       }
@@ -65,7 +65,7 @@ export class Lexer {
     }
   }
 
-  #scanSyntaxKind(): [syntaxKind: SyntaxKind, sourceSpan: SourceSpan, value: unknown] {
+  #scanSyntaxKind(): [syntaxKind: LexerSyntaxKind, sourceSpan: SourceSpan, value: unknown] {
     const start = this.#position;
     if (this.sourceText.matchesAll(this.#position, CharacterCode.BraceOpen)) {
       this.#position += 1;
@@ -530,10 +530,10 @@ export class Lexer {
     this.#position += 1;
     const invalidSpan = new SourceSpan(this.sourceText, Range.create(start, this.#position));
     this.#diagnostics.push(Diagnostic.invalidCharacter(invalidSpan));
-    return [SyntaxKind.InvalidSyntax, invalidSpan, undefined];
+    return [SyntaxKind.InvalidSyntaxToken, invalidSpan, undefined];
   }
 
-  #scanNumber(): [syntaxKind: SyntaxKind, sourceSpan: SourceSpan, value: unknown] {
+  #scanNumber(): [syntaxKind: SyntaxTokenKind, sourceSpan: SourceSpan, value: unknown] {
     const start = this.#position;
     let read = 0;
     let isFloat = false;
@@ -584,7 +584,7 @@ export class Lexer {
       }
     }
 
-    let syntaxKind: SyntaxKind;
+    let syntaxKind: SyntaxTokenKind;
     let value: number | bigint;
     const suffix = this.#scanNumberSuffix(start + read, isFloat);
     read += suffix.length;
@@ -677,7 +677,7 @@ export class Lexer {
     return [syntaxKind, sourceSpan, value];
   }
 
-  #scanIdentifier(): [syntaxKind: SyntaxKind, sourceSpan: SourceSpan, value: unknown] {
+  #scanIdentifier(): [syntaxKind: LexerSyntaxKind, sourceSpan: SourceSpan, value: unknown] {
     const start = this.#position;
 
     do {
@@ -700,7 +700,7 @@ export class Lexer {
   #scanNumberSuffix(
     position: number,
     isFloat: boolean
-  ): { readonly length: number; readonly syntaxKind?: SyntaxKind } {
+  ): { readonly length: number; readonly syntaxKind?: SyntaxTokenKind } {
     if (this.#matchesText(position, "f16"))
       return { length: 3, syntaxKind: SyntaxKind.F16LiteralToken };
     if (this.#matchesText(position, "f32"))
@@ -772,7 +772,7 @@ export class Lexer {
     return texts.some((text) => this.#matchesText(position, text));
   }
 
-  #scanString(): [syntaxKind: SyntaxKind, sourceSpan: SourceSpan, value: unknown] {
+  #scanString(): [syntaxKind: SyntaxTokenKind, sourceSpan: SourceSpan, value: unknown] {
     {
       const start = this.#position;
       let terminated = false;

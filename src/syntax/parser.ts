@@ -2,14 +2,14 @@ import { Diagnostic } from "../diagnostics/diagnostic.js";
 import { SyntaxFacts } from "../syntax-facts.js";
 import { SyntaxKind } from "../syntax-kind.js";
 import { SeparatedSyntaxList, SyntaxList, type SyntaxOrSeparator } from "../syntax-list.js";
-import { SyntaxToken, type SyntaxTokenOf } from "../syntax-token.js";
+import { SyntaxToken, type LexerSyntaxKind, type SyntaxTokenOf } from "../syntax-token.js";
 import { Range } from "../text/range.js";
 import { SourceSpan } from "../text/source-span.js";
 import { CompilationUnitSyntax } from "./compilation-unit-syntax.js";
 import { GlobalDeclarationSyntax, LocalDeclarationSyntax } from "./declaration-syntax.js";
-import { ArrayInitializerExpressionSyntax, AssignmentExpression, BinaryExpressionSyntax, BlockExpressionSyntax, type BlockItemSyntax, BreakExpressionSyntax, CallExpressionSyntax, ContinueExpressionSyntax, ConversionExpressionSyntax, ElementAccessExpressionSyntax, ElseClauseExpressionSyntax, type ExpressionSyntax, GroupExpressionSyntax, IfExpressionSyntax, LambdaExpressionSyntax, LiteralExpressionSyntax, MemberAccessExpressionSyntax, ModuleExpressionSyntax, NameExpressionSyntax, PropertyInitializerExpression, ReturnExpressionSyntax, StructExpressionSyntax, StructInitializerExpressionSyntax, UnaryExpressionSyntax, WhileExpressionSyntax } from "./expression-syntax.js";
+import { ArrayInitializerExpressionSyntax, AssignmentExpression, BinaryExpressionSyntax, BlockExpressionSyntax, type BlockItemSyntax, BreakExpressionSyntax, InvocationExpressionSyntax, ContinueExpressionSyntax, ConversionExpressionSyntax, ElementAccessExpressionSyntax, ElseClauseExpressionSyntax, type ExpressionSyntax, GroupExpressionSyntax, IfElseExpressionSyntax, LambdaExpressionSyntax, LiteralExpressionSyntax, MemberAccessExpressionSyntax, ModuleExpressionSyntax, NameExpressionSyntax, PropertyInitializerExpression, ReturnExpressionSyntax, StructExpressionSyntax, ObjectInitializerExpressionSyntax, UnaryExpressionSyntax, WhileExpressionSyntax } from "./expression-syntax.js";
 import { QualifiedNameSyntax, SimpleNameSyntax, type NameSyntax } from "./name-syntax.js";
-import { StatementSyntax } from "./statement-syntax.js";
+import { ExpressionStatementSyntax } from "./statement-syntax.js";
 import type { SyntaxTokenStream } from "./syntax-token-stream.js";
 import { ArrayTypeSyntax, ErrorTypeSyntax, LambdaTypeSyntax, MaybeTypeSyntax, NamedTypeSyntax, PointerTypeSyntax, PredefinedTypeSyntax, type TypeSyntax, UnionTypeSyntax } from "./type-syntax.js";
 
@@ -266,7 +266,7 @@ export class Parser {
                         properties.push(this.#match(SyntaxKind.CommaToken));
                     }
                     const braceCloseToken = this.#match(SyntaxKind.BraceCloseToken);
-                    expression = new StructInitializerExpressionSyntax(expression, braceOpenToken, new SeparatedSyntaxList(properties), braceCloseToken);
+                    expression = new ObjectInitializerExpressionSyntax(expression, braceOpenToken, new SeparatedSyntaxList(properties), braceCloseToken);
                 } continue;
 
                 case SyntaxKind.ParenthesisOpenToken: {
@@ -278,7 +278,7 @@ export class Parser {
                         argumentList.push(this.#match(SyntaxKind.CommaToken));
                     }
                     const parenthesisCloseToken = this.#match(SyntaxKind.ParenthesisCloseToken);
-                    expression = new CallExpressionSyntax(expression, parenthesisOpenToken, new SeparatedSyntaxList(argumentList), parenthesisCloseToken);
+                    expression = new InvocationExpressionSyntax(expression, parenthesisOpenToken, new SeparatedSyntaxList(argumentList), parenthesisCloseToken);
                 } continue;
 
                 case SyntaxKind.BracketOpenToken: {
@@ -336,7 +336,7 @@ export class Parser {
         return new StructExpressionSyntax(structKeyword, braceOpenToken, new SyntaxList(properties), braceCloseToken);
     }
 
-    #parseExpression_If(): IfExpressionSyntax {
+    #parseExpression_If(): IfElseExpressionSyntax {
         const ifKeyword = this.#match(SyntaxKind.IfKeyword);
         const parenthesisOpenToken = this.#match(SyntaxKind.ParenthesisOpenToken);
         const condition = this.#parseExpression();
@@ -347,7 +347,7 @@ export class Parser {
             const elseKeyword = this.#match(SyntaxKind.ElseKeyword);
             elseClause = new ElseClauseExpressionSyntax(elseKeyword, this.#parseExpression());
         }
-        return new IfExpressionSyntax(
+        return new IfElseExpressionSyntax(
             ifKeyword,
             parenthesisOpenToken,
             condition,
@@ -379,7 +379,11 @@ export class Parser {
     }
 
     #parseExpression_Continue(): ContinueExpressionSyntax {
-        return new ContinueExpressionSyntax(this.#match(SyntaxKind.ContinueKeyword));
+        const continueKeyword = this.#match(SyntaxKind.ContinueKeyword);
+        const expression = this.#isExpressionTerminator()
+            ? undefined
+            : this.#parseExpression();
+        return new ContinueExpressionSyntax(continueKeyword, expression);
     }
 
     #parseExpression_Return(): ReturnExpressionSyntax {
@@ -400,9 +404,9 @@ export class Parser {
             } else {
                 item = this.#parseExpression();
                 if (this.#stream.peek().syntaxKind === SyntaxKind.SemicolonToken) {
-                    item = new StatementSyntax(item, this.#stream.next());
+                    item = new ExpressionStatementSyntax(item, this.#stream.next());
                 } else if (this.#stream.peek().syntaxKind !== SyntaxKind.BraceCloseToken) {
-                    item = new StatementSyntax(
+                    item = new ExpressionStatementSyntax(
                         item,
                         this.#createSyntheticAtCurrent(SyntaxKind.SemicolonToken));
                 }
@@ -458,14 +462,14 @@ export class Parser {
         return new NameExpressionSyntax(name);
     }
 
-    #match<T extends SyntaxKind>(syntaxKind: T): SyntaxTokenOf<T> {
+    #match<T extends LexerSyntaxKind>(syntaxKind: T): SyntaxTokenOf<T> {
         const syntaxToken = this.#stream.next();
         if (syntaxToken.syntaxKind === syntaxKind) return syntaxToken as SyntaxTokenOf<T>;
 
         return this.#createSyntheticFrom(syntaxToken, syntaxKind);
     }
 
-    #matchAny<const T extends readonly [SyntaxKind, SyntaxKind, ...SyntaxKind[]]>(...syntaxKinds: T): SyntaxTokenOf<T[number]> {
+    #matchAny<const T extends readonly [LexerSyntaxKind, LexerSyntaxKind, ...LexerSyntaxKind[]]>(...syntaxKinds: T): SyntaxTokenOf<T[number]> {
         const syntaxToken = this.#stream.next();
         for (const syntaxKind of syntaxKinds)
             if (syntaxToken.syntaxKind === syntaxKind)
@@ -474,12 +478,12 @@ export class Parser {
         return this.#createSyntheticFrom(syntaxToken, syntaxKinds[0]);
     }
 
-    #createSyntheticFrom<T extends SyntaxKind>(syntaxToken: SyntaxToken, expectedSyntaxKind: T): SyntaxTokenOf<T> {
+    #createSyntheticFrom<T extends LexerSyntaxKind>(syntaxToken: SyntaxToken, expectedSyntaxKind: T): SyntaxTokenOf<T> {
         this.#diagnostics.push(Diagnostic.unexpectedToken(expectedSyntaxKind, syntaxToken));
         return new SyntaxToken(expectedSyntaxKind, syntaxToken.sourceSpan, [], [], undefined, true) as SyntaxTokenOf<T>;
     }
 
-    #createSyntheticAtCurrent<T extends SyntaxKind>(expectedSyntaxKind: T): SyntaxTokenOf<T> {
+    #createSyntheticAtCurrent<T extends LexerSyntaxKind>(expectedSyntaxKind: T): SyntaxTokenOf<T> {
         const actual = this.#stream.peek();
         this.#diagnostics.push(Diagnostic.unexpectedToken(expectedSyntaxKind, actual));
         const sourceSpan = new SourceSpan(

@@ -1,14 +1,14 @@
 import { SyntaxFacts } from "../syntax-facts.js";
-import { SyntaxKind } from "../syntax-kind.js";
+import { SyntaxKind, type LiteralSyntaxKind } from "../syntax-kind.js";
 import type { SeparatedSyntaxList, SyntaxList } from "../syntax-list.js";
 import type { ISyntaxNode, SyntaxNode } from "../syntax-node.js";
 import type { SyntaxToken } from "../syntax-token.js";
 import type { LocalDeclarationSyntax } from "./declaration-syntax.js";
 import type { NameSyntax, SimpleNameSyntax } from "./name-syntax.js";
-import type { StatementSyntax } from "./statement-syntax.js";
+import type { ExpressionStatementSyntax } from "./statement-syntax.js";
 import type { TypeSyntax } from "./type-syntax.js";
 
-export type ExpressionSyntax = ModuleExpressionSyntax | StructExpressionSyntax | BlockExpressionSyntax | GroupExpressionSyntax | LambdaExpressionSyntax | ArrayInitializerExpressionSyntax | LiteralExpressionSyntax | NameExpressionSyntax | UnaryExpressionSyntax | BinaryExpressionSyntax | AssignmentExpression | CallExpressionSyntax | StructInitializerExpressionSyntax | ElementAccessExpressionSyntax | MemberAccessExpressionSyntax | ConversionExpressionSyntax | IfExpressionSyntax | WhileExpressionSyntax | ContinueExpressionSyntax | BreakExpressionSyntax | ReturnExpressionSyntax;
+export type ExpressionSyntax = ModuleExpressionSyntax | StructExpressionSyntax | BlockExpressionSyntax | GroupExpressionSyntax | LambdaExpressionSyntax | ArrayInitializerExpressionSyntax | LiteralExpressionSyntax | NameExpressionSyntax | UnaryExpressionSyntax | BinaryExpressionSyntax | AssignmentExpression | InvocationExpressionSyntax | ObjectInitializerExpressionSyntax | PropertyInitializerExpression | ElementAccessExpressionSyntax | MemberAccessExpressionSyntax | ConversionExpressionSyntax | IfElseExpressionSyntax | WhileExpressionSyntax | ContinueExpressionSyntax | BreakExpressionSyntax | ReturnExpressionSyntax;
 
 export class ModuleExpressionSyntax implements ISyntaxNode {
     readonly syntaxKind = SyntaxKind.ModuleExpression;
@@ -33,7 +33,7 @@ export class StructExpressionSyntax implements ISyntaxNode {
     }
 }
 
-export type BlockItemSyntax = LocalDeclarationSyntax | StatementSyntax | ExpressionSyntax;
+export type BlockItemSyntax = LocalDeclarationSyntax | ExpressionStatementSyntax | ExpressionSyntax;
 
 export class BlockExpressionSyntax implements ISyntaxNode {
     readonly syntaxKind = SyntaxKind.BlockExpression;
@@ -94,8 +94,6 @@ export class ArrayInitializerExpressionSyntax implements ISyntaxNode {
     }
 }
 
-export type LiteralSyntaxKind = SyntaxKind.I8LiteralExpression | SyntaxKind.U8LiteralExpression | SyntaxKind.I16LiteralExpression | SyntaxKind.U16LiteralExpression | SyntaxKind.I32LiteralExpression | SyntaxKind.U32LiteralExpression | SyntaxKind.I64LiteralExpression | SyntaxKind.U64LiteralExpression | SyntaxKind.F16LiteralExpression | SyntaxKind.F32LiteralExpression | SyntaxKind.F64LiteralExpression | SyntaxKind.StrLiteralExpression | SyntaxKind.TrueLiteralExpression | SyntaxKind.FalseLiteralExpression | SyntaxKind.NullLiteralExpression;
-
 export class LiteralExpressionSyntax implements ISyntaxNode {
     constructor(readonly syntaxKind: LiteralSyntaxKind, readonly literalToken: SyntaxToken) { }
     *children(): Iterator<SyntaxNode> { yield this.literalToken; }
@@ -141,35 +139,35 @@ export class BinaryExpressionSyntax implements ISyntaxNode {
 export class AssignmentExpression implements ISyntaxNode {
     readonly syntaxKind = SyntaxKind.AssignmentExpression;
     constructor(
-        readonly left: ExpressionSyntax,
+        readonly location: ExpressionSyntax,
         readonly equalsToken: SyntaxToken,
-        readonly right: ExpressionSyntax) { }
+        readonly value: ExpressionSyntax) { }
     *children(): Iterator<SyntaxNode> {
-        yield this.left;
+        yield this.location;
         yield this.equalsToken;
-        yield this.right;
+        yield this.value;
     }
 }
 
-export class CallExpressionSyntax implements ISyntaxNode {
-    readonly syntaxKind = SyntaxKind.CallExpression;
+export class InvocationExpressionSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.InvocationExpression;
     constructor(
         readonly callee: ExpressionSyntax,
         readonly parenthesisOpenToken: SyntaxToken,
-        readonly argumentList: SeparatedSyntaxList<ExpressionSyntax, SyntaxKind.CommaToken>,
+        readonly arguments_: SeparatedSyntaxList<ExpressionSyntax, SyntaxKind.CommaToken>,
         readonly parenthesisCloseToken: SyntaxToken) { }
     * children(): Iterator<SyntaxNode> {
         {
             yield this.callee;
             yield this.parenthesisOpenToken;
-            for (const argument of this.argumentList.syntaxNodes) yield argument;
+            for (const argument of this.arguments_.syntaxNodes) yield argument;
             yield this.parenthesisCloseToken;
         }
     }
 }
 
-export class StructInitializerExpressionSyntax implements ISyntaxNode {
-    readonly syntaxKind = SyntaxKind.StructInitializerExpression;
+export class ObjectInitializerExpressionSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.ObjectInitializerExpression;
     constructor(
         readonly typeName: ExpressionSyntax,
         readonly braceOpenToken: SyntaxToken,
@@ -239,14 +237,14 @@ export class PropertyInitializerExpression implements ISyntaxNode {
     }
 }
 
-export class IfExpressionSyntax implements ISyntaxNode {
-    readonly syntaxKind = SyntaxKind.IfExpression;
+export class IfElseExpressionSyntax implements ISyntaxNode {
+    readonly syntaxKind = SyntaxKind.IfElseExpression;
     constructor(
         readonly ifKeyword: SyntaxToken,
         readonly parenthesisOpenToken: SyntaxToken,
         readonly condition: ExpressionSyntax,
         readonly parenthesisCloseToken: SyntaxToken,
-        readonly thenExpression: ExpressionSyntax,
+        readonly then: ExpressionSyntax,
         readonly elseClause: ElseClauseExpressionSyntax | undefined) { }
 
     *children(): Iterator<SyntaxNode> {
@@ -254,13 +252,13 @@ export class IfExpressionSyntax implements ISyntaxNode {
         yield this.parenthesisOpenToken;
         yield this.condition;
         yield this.parenthesisCloseToken;
-        yield this.thenExpression;
+        yield this.then;
         if (this.elseClause) yield this.elseClause;
     }
 }
 
 export class ElseClauseExpressionSyntax implements ISyntaxNode {
-    readonly syntaxKind = SyntaxKind.ElseClauseExpression;
+    readonly syntaxKind = SyntaxKind.ElseClause;
     constructor(
         readonly elseKeyword: SyntaxToken,
         readonly expression: ExpressionSyntax) { }
@@ -291,7 +289,9 @@ export class WhileExpressionSyntax implements ISyntaxNode {
 
 export class ContinueExpressionSyntax implements ISyntaxNode {
     readonly syntaxKind = SyntaxKind.ContinueExpression;
-    constructor(readonly continueKeyword: SyntaxToken) { }
+    constructor(
+        readonly continueKeyword: SyntaxToken,
+        readonly expression: ExpressionSyntax | undefined) { }
     *children(): Iterator<SyntaxNode> { yield this.continueKeyword; }
 }
 

@@ -1,11 +1,9 @@
-import { SyntaxKind } from "./syntax-kind.js";
-import type { LiteralSyntaxKind } from "./syntax/expression-syntax.js";
-import type { PredefinedTypeSyntaxKind } from "./syntax/type-syntax.js";
+import { SyntaxKind, type KeywordSyntaxKind, type LiteralSyntaxKind, type TypeSyntaxKind } from "./syntax-kind.js";
 
 export const SyntaxFacts = Object.freeze({
     getText(syntaxKind: SyntaxKind): string | undefined {
         switch (syntaxKind) {
-            case SyntaxKind.InvalidSyntax: return undefined;
+            case SyntaxKind.InvalidSyntaxToken: return undefined;
             case SyntaxKind.EofToken: return undefined;
             case SyntaxKind.IdentifierToken: return undefined;
 
@@ -128,11 +126,11 @@ export const SyntaxFacts = Object.freeze({
 
             case SyntaxKind.MaybeType: return undefined;
             case SyntaxKind.NamedType: return undefined;
-            case SyntaxKind.ErrorType: return undefined;
             case SyntaxKind.PointerType: return undefined;
             case SyntaxKind.ArrayType: return undefined;
             case SyntaxKind.LambdaType: return undefined;
             case SyntaxKind.UnionType: return undefined;
+            case SyntaxKind.ErrorType: return undefined;
 
             case SyntaxKind.Parameter: return undefined;
             case SyntaxKind.Argument: return undefined;
@@ -165,7 +163,7 @@ export const SyntaxFacts = Object.freeze({
             case SyntaxKind.PropertyInitializerExpression: return undefined;
 
             case SyntaxKind.ElementAccessExpression: return undefined;
-            case SyntaxKind.CallExpression: return undefined;
+            case SyntaxKind.InvocationExpression: return undefined;
             case SyntaxKind.MemberAccessExpression: return undefined;
             case SyntaxKind.ConversionExpression: return undefined;
 
@@ -200,8 +198,8 @@ export const SyntaxFacts = Object.freeze({
             case SyntaxKind.AssignmentExpression: return undefined;
             case SyntaxKind.InitValueExpression: return undefined;
 
-            case SyntaxKind.IfExpression: return undefined;
-            case SyntaxKind.ElseClauseExpression: return undefined;
+            case SyntaxKind.IfElseExpression: return undefined;
+            case SyntaxKind.ElseClause: return undefined;
             case SyntaxKind.WhileExpression: return undefined;
 
             case SyntaxKind.ContinueExpression: return undefined;
@@ -212,7 +210,7 @@ export const SyntaxFacts = Object.freeze({
         }
     },
 
-    getKeywordKind(syntaxText: string): SyntaxKind {
+    getKeywordKind(syntaxText: string): KeywordSyntaxKind | SyntaxKind.IdentifierToken {
         switch (syntaxText) {
             case "as": return SyntaxKind.AsKeyword;
             case "if": return SyntaxKind.IfKeyword;
@@ -260,7 +258,7 @@ export const SyntaxFacts = Object.freeze({
         };
     },
 
-    getPredefinedTypeKind(syntaxKind: SyntaxKind): PredefinedTypeSyntaxKind | undefined {
+    getPredefinedTypeKind(syntaxKind: SyntaxKind): TypeSyntaxKind | undefined {
         switch (syntaxKind) {
             case SyntaxKind.AnyKeyword: return SyntaxKind.AnyType;
             case SyntaxKind.ErrKeyword: return SyntaxKind.ErrType;
